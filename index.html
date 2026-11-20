@@ -54,7 +54,7 @@
     }
     .btn-cambiar-analista:active { background: #cbd5e1; }
 
-    /* Contador interactivo (Opción 2) */
+    /* Contador interactivo */
     .badge {
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       background: #e2e8f0; color: #334155; padding: 8px 16px; border-radius: 20px;
@@ -127,7 +127,7 @@
     }
     .btn-guardar:active { background: #15803d; }
 
-    /* Banner Deshacer 15 segundos (Opción 1) */
+    /* Banner Deshacer 15 segundos */
     .banner-deshacer {
       position: fixed; top: 14px; left: 14px; right: 14px;
       background: #0f172a; color: white; padding: 14px 16px; border-radius: 16px;
@@ -146,7 +146,7 @@
     }
     .btn-deshacer:active { background: #d97706; }
 
-    /* Pantalla de Revisión y Corrección (Opción 2) */
+    /* Pantalla de Revisión y Corrección */
     .lista-contenedor {
       flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
       margin: 14px 0; padding-right: 2px;
@@ -180,7 +180,7 @@
     }
     .btn-eliminar-item:active { background: #fecaca; }
 
-    /* Modal Exportación */
+    /* Modal Exportación Bluetooth */
     .modal-fondo {
       display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65);
       align-items: center; justify-content: center; padding: 20px; z-index: 200;
@@ -193,7 +193,7 @@
     .modal-caja h2 { margin: 0 0 10px 0; font-size: 1.25rem; color: #0f172a; }
     .modal-caja p { margin: 0 0 20px 0; font-size: 0.98rem; color: #475569; line-height: 1.4; }
     .modal-botones { display: flex; flex-direction: column; gap: 10px; }
-    .btn-onedrive {
+    .btn-bluetooth {
       width: 100%; padding: 16px; border-radius: 12px; border: none;
       background: #0284c7; color: white; font-size: 1.1rem; font-weight: bold; cursor: pointer;
     }
@@ -221,13 +221,13 @@
     <button class="btn-deshacer" onclick="ejecutarDeshacer()">DESHACER</button>
   </div>
 
-  <!-- Modal Confirmación OneDrive -->
+  <!-- Modal Confirmación Bluetooth -->
   <div id="modal-confirmacion" class="modal-fondo">
     <div class="modal-caja">
-      <h2 id="modal-titulo">Exportar corte a OneDrive</h2>
-      <p id="modal-mensaje">Se generará el reporte y la memoria del celular volverá a 0.</p>
+      <h2 id="modal-titulo">Enviar corte por Bluetooth</h2>
+      <p id="modal-mensaje">Se generará el archivo Excel para enviarlo por Bluetooth y la memoria del celular volverá a 0.</p>
       <div class="modal-botones">
-        <button id="btn-confirmar-envio" class="btn-onedrive">Enviar a OneDrive y Limpiar</button>
+        <button id="btn-confirmar-envio" class="btn-bluetooth">Enviar por Bluetooth y Limpiar</button>
         <button class="btn-secundario" style="margin-top:0;" onclick="cerrarModal()">Cancelar</button>
       </div>
     </div>
@@ -273,7 +273,7 @@
 
     <div class="footer-accion">
       <button id="btn-descargar" class="btn-descargar" onclick="abrirModalExportacion(false)" disabled>
-        Guardar en OneDrive y Limpiar
+        Enviar por Bluetooth y Limpiar
       </button>
       <button id="btn-respaldo" class="btn-respaldo" onclick="abrirModalExportacion(true)">
         Reenviar último corte
@@ -323,7 +323,7 @@
     </div>
   </div>
 
-  <!-- PANTALLA 3: REVISAR Y CORREGIR REGISTROS (OPCIÓN 2) -->
+  <!-- PANTALLA 3: REVISAR Y CORREGIR REGISTROS -->
   <div id="pantalla-lista" class="pantalla">
     <div class="header">
       <h1>Registros Pendientes</h1>
@@ -362,7 +362,6 @@
     let intervaloEscaneo = null;
     let modoRespaldoActivo = false;
 
-    // Variables para Opción 1 (Deshacer 15 segundos)
     let ultimoRegistroGuardado = null;
     let intervaloDeshacer = null;
     let segundosRestantesDeshacer = 0;
@@ -573,7 +572,7 @@
       mostrarBannerDeshacer(nuevoRegistro);
     }
 
-    // --- OPCIÓN 1: DESHACER DURANTE 15 SEGUNDOS ---
+    // --- DESHACER DURANTE 15 SEGUNDOS ---
     function mostrarBannerDeshacer(registro) {
       ocultarBannerDeshacer();
       ultimoRegistroGuardado = registro;
@@ -607,13 +606,11 @@
       const reg = ultimoRegistroGuardado;
       ocultarBannerDeshacer();
 
-      // Eliminar ese último registro de localStorage
       let registros = obtenerRegistros(STORAGE_KEY);
       registros = registros.filter(r => r.id !== reg.id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
       actualizarInterfaz();
 
-      // Restaurar pantalla de cantidad con los datos cargados para corregir
       materialActual = reg.Codigo_Material;
       loteActual = reg.Lote_Interno;
       unidadActual = reg.Unidad || '';
@@ -629,7 +626,7 @@
       mostrarToast('Registro revertido: corrige la cantidad');
     }
 
-    // --- OPCIÓN 2: REVISAR Y CORREGIR DESDE EL CONTADOR ---
+    // --- REVISAR Y CORREGIR DESDE EL CONTADOR ---
     function abrirListaRegistros() {
       const registros = obtenerRegistros(STORAGE_KEY);
       if (registros.length === 0) return;
@@ -649,7 +646,6 @@
         return;
       }
 
-      // Mostrar del más reciente al más antiguo
       [...registros].reverse().forEach((reg, idxRev) => {
         const idxReal = registros.length - 1 - idxRev;
         const tarjeta = document.createElement('div');
@@ -711,7 +707,7 @@
       }
     }
 
-    // --- EXPORTACIÓN A ONEDRIVE ---
+    // --- EXPORTACIÓN POR BLUETOOTH ---
     function abrirModalExportacion(esRespaldo) {
       ocultarBannerDeshacer();
       modoRespaldoActivo = esRespaldo;
@@ -719,16 +715,16 @@
       if (lista.length === 0) return;
 
       document.getElementById('modal-titulo').textContent = esRespaldo 
-        ? 'Reenviar último corte' 
-        : 'Guardar corte en OneDrive';
+        ? 'Reenviar último corte por Bluetooth' 
+        : 'Enviar corte por Bluetooth';
       
       document.getElementById('modal-mensaje').textContent = esRespaldo
-        ? `Se exportarán los ${lista.length} registros del corte anterior.`
-        : `Se exportarán ${lista.length} registros y la memoria del celular volverá a 0 para el siguiente turno.`;
+        ? `Se volverán a enviar los ${lista.length} registros del corte anterior por Bluetooth.`
+        : `Se exportarán ${lista.length} registros por Bluetooth y la memoria del celular volverá a 0.`;
 
       document.getElementById('btn-confirmar-envio').textContent = esRespaldo
-        ? 'Exportar Respaldo'
-        : 'Exportar y Limpiar Memoria';
+        ? 'Reenviar por Bluetooth'
+        : 'Enviar por Bluetooth y Limpiar';
 
       document.getElementById('modal-confirmacion').classList.add('activo');
     }
@@ -768,9 +764,9 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         exportado = true;
-        mostrarToast('Descargado: toca la notificación para subir a OneDrive');
+        mostrarToast('Guardado en Descargas (envía por Bluetooth desde Mis Archivos)');
       } else {
-        mostrarToast('Enviado y memoria limpia');
+        mostrarToast('Listo para Bluetooth y memoria limpia');
       }
 
       if (exportado && !modoRespaldoActivo) {
@@ -784,7 +780,6 @@
       const ahora = new Date();
       const timestamp = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}_${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
 
-      // Limpiar campos internos (id, Unidad) antes de generar el reporte
       const datosLimpios = registros.map(r => ({
         Fecha: r.Fecha,
         Hora: r.Hora,
@@ -798,7 +793,6 @@
         const nombreArchivo = `${prefijo}_${timestamp}.xlsx`;
         const hoja = XLSX.utils.json_to_sheet(datosLimpios);
         const rango = XLSX.utils.decode_range(hoja['!ref']);
-        // Columnas D (Codigo_Material) y E (Lote_Interno) protegidas como texto
         for (let R = 1; R <= rango.e.r; ++R) {
           ['D', 'E'].forEach(col => {
             const celda = hoja[`${col}${R + 1}`];
