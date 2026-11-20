@@ -7,6 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1d4ed8">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f6f9; color: #1e293b; height: 100dvh; display: flex; flex-direction: column; user-select: none; overflow: hidden; }
@@ -90,25 +91,37 @@
     }
 
     /* Cámara */
-    .camara-contenedor { position: relative; width: 100%; flex-grow: 1; background: #000; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin: 14px 0; }
+    .camara-contenedor { position: relative; width: 100%; flex-grow: 1; background: #000; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin: 12px 0; }
     video { width: 100%; height: 100%; object-fit: cover; }
     .guia-escaneo {
-      position: absolute; width: 84%; height: 32%; border: 3px solid #22c55e;
-      border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
-      display: flex; align-items: center; justify-content: center;
+      position: absolute; width: 88%; height: 42%; border: 3px solid #22c55e;
+      border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+      display: flex; align-items: center; justify-content: center; pointer-events: none;
     }
-    .linea-laser { width: 90%; height: 2px; background: rgba(239, 68, 68, 0.85); box-shadow: 0 0 8px #ef4444; }
-    .btn-secundario { width: 100%; padding: 15px; border-radius: 12px; border: none; background: #e2e8f0; color: #1e293b; font-size: 1.05rem; font-weight: 600; margin-top: 8px; cursor: pointer; }
+    .linea-laser { width: 92%; height: 2px; background: rgba(239, 68, 68, 0.9); box-shadow: 0 0 8px #ef4444; }
+    .btn-linterna {
+      position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.75);
+      color: white; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 20px;
+      padding: 8px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer; z-index: 10;
+    }
+    .btn-linterna.encendida { background: #f59e0b; color: #0f172a; border-color: #f59e0b; }
+    .btn-secundario { width: 100%; padding: 14px; border-radius: 12px; border: none; background: #e2e8f0; color: #1e293b; font-size: 1.02rem; font-weight: 600; margin-top: 8px; cursor: pointer; }
 
     /* Pantalla de Cantidad */
     .tarjeta-datos { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .dato-bloque { text-align: center; }
-    .dato-bloque span { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 4px; }
-    .dato-bloque strong { font-size: 1.6rem; color: #0f172a; word-break: break-all; }
-    .dato-bloque.secundario strong { font-size: 1.3rem; color: #334155; }
+    .dato-bloque span { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 3px; }
+    .dato-bloque strong { font-size: 1.55rem; color: #0f172a; word-break: break-all; }
+    .dato-bloque.secundario strong { font-size: 1.25rem; color: #334155; }
     .divisor-tarjeta { height: 1px; background: #e2e8f0; width: 100%; }
+    .fila-badges-sap { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+    .pill-sap { background: #e0f2fe; color: #0369a1; font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: 10px; }
+    .btn-lote-manual {
+      background: none; border: 1px dashed #94a3b8; color: #475569; border-radius: 8px;
+      padding: 5px 10px; font-size: 0.8rem; font-weight: 600; margin-top: 6px; cursor: pointer;
+    }
 
-    .control-cantidad { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 18px 0; }
+    .control-cantidad { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
     .btn-ajuste {
       width: 72px; height: 72px; border-radius: 16px; border: none;
       background: #e2e8f0; color: #0f172a; font-size: 2.2rem; font-weight: bold;
@@ -153,7 +166,7 @@
     }
     .item-registro {
       background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 14px;
-      padding: 14px; display: flex; flex-direction: column; gap: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 8px;
     }
     .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
     .item-material { font-size: 1.15rem; font-weight: 800; color: #0f172a; word-break: break-all; }
@@ -161,7 +174,7 @@
       background: #eff6ff; color: #1d4ed8; font-size: 0.78rem; font-weight: 700;
       padding: 4px 10px; border-radius: 12px; white-space: nowrap;
     }
-    .item-lote { font-size: 0.88rem; color: #475569; }
+    .item-lote { font-size: 0.86rem; color: #475569; }
     .item-controles { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 10px; }
     .item-qty-box { display: flex; align-items: center; gap: 10px; }
     .btn-mini-qty {
@@ -287,7 +300,8 @@
       <h1>Centra el QR o Código de Barras</h1>
     </div>
     <div class="camara-contenedor">
-      <video id="video" playsinline></video>
+      <video id="video" playsinline muted></video>
+      <button id="btn-linterna" class="btn-linterna" onclick="alternarLinterna()" style="display:none;">Linterna</button>
       <div class="guia-escaneo"><div class="linea-laser"></div></div>
     </div>
     <button class="btn-secundario" onclick="ingresoManual()">Escribir código manualmente</button>
@@ -305,6 +319,11 @@
       <div class="dato-bloque secundario">
         <span>Lote Interno</span>
         <strong id="texto-lote">---</strong>
+        <div class="fila-badges-sap">
+          <span id="badge-almacen" class="pill-sap" style="display:none;">Almacén: ---</span>
+          <span id="badge-unidad" class="pill-sap">Unidad: PZA</span>
+        </div>
+        <button id="btn-editar-lote" class="btn-lote-manual" onclick="editarLoteManual()">Editar / Agregar lote</button>
       </div>
     </div>
 
@@ -357,9 +376,13 @@
     let analistaActual = '';
     let materialActual = '';
     let loteActual = '';
-    let unidadActual = '';
+    let unidadActual = 'PZA';
+
+    let zxingReader = null;
     let streamCamara = null;
-    let intervaloEscaneo = null;
+    let intervaloEscaneoNativo = null;
+    let escaneoProcesado = false;
+    let linternaActiva = false;
     let modoRespaldoActivo = false;
 
     let ultimoRegistroGuardado = null;
@@ -372,6 +395,17 @@
 
     renderizarBotonesAnalistas();
     actualizarInterfaz();
+
+    function calcularDatosSAP(lote) {
+      const loteMayus = (lote || '').toUpperCase();
+      if (loteMayus.includes('ZG')) {
+        return { almacen: 'HR10', centroCostos: '1020220003', cuenta: '6215250001' };
+      }
+      if (loteMayus.includes('ZF')) {
+        return { almacen: 'RR20', centroCostos: '1010222001', cuenta: '6215250001' };
+      }
+      return { almacen: '', centroCostos: '', cuenta: '6215250001' };
+    }
 
     function renderizarBotonesAnalistas() {
       const contenedor = document.getElementById('grid-analistas');
@@ -445,40 +479,70 @@
 
     async function iniciarCamara() {
       ocultarBannerDeshacer();
+      escaneoProcesado = false;
+      linternaActiva = false;
+      const btnLinterna = document.getElementById('btn-linterna');
+      btnLinterna.style.display = 'none';
+      btnLinterna.classList.remove('encendida');
+      btnLinterna.textContent = 'Linterna';
+
       cambiarPantalla('pantalla-camara');
       const video = document.getElementById('video');
 
       try {
-        streamCamara = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' }]
-          }
-        });
-        video.srcObject = streamCamara;
-        await video.play();
+        if (typeof ZXing !== 'undefined') {
+          const hints = new Map();
+          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+          zxingReader = new ZXing.BrowserMultiFormatReader(hints, 150);
 
-        if ('BarcodeDetector' in window) {
-          const detector = new BarcodeDetector({
-            formats: [
-              'qr_code', 'code_128', 'code_39', 'code_93',
-              'ean_13', 'ean_8', 'upc_a', 'upc_e',
-              'itf', 'codabar', 'data_matrix'
-            ]
-          });
-
-          intervaloEscaneo = setInterval(async () => {
-            try {
-              const codigos = await detector.detect(video);
-              if (codigos.length > 0) {
-                procesarCodigoLeido(codigos[0].rawValue);
+          await zxingReader.decodeFromConstraints(
+            {
+              video: {
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
               }
-            } catch (e) {}
-          }, 200);
+            },
+            'video',
+            (result, err) => {
+              if (result && !escaneoProcesado) {
+                escaneoProcesado = true;
+                procesarCodigoLeido(result.getText());
+              }
+            }
+          );
+
+          configurarHardwareCamara(video);
         } else {
-          alert('El motor de escaneo no está disponible. Usa ingreso manual.');
+          streamCamara = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+          });
+          video.srcObject = streamCamara;
+          await video.play();
+          configurarHardwareCamara(video);
+
+          if ('BarcodeDetector' in window) {
+            const detector = new BarcodeDetector({
+              formats: [
+                'qr_code', 'code_128', 'code_39', 'code_93',
+                'ean_13', 'ean_8', 'upc_a', 'upc_e',
+                'itf', 'codabar', 'data_matrix'
+              ]
+            });
+
+            intervaloEscaneoNativo = setInterval(async () => {
+              if (escaneoProcesado) return;
+              try {
+                const codigos = await detector.detect(video);
+                if (codigos.length > 0 && !escaneoProcesado) {
+                  escaneoProcesado = true;
+                  procesarCodigoLeido(codigos[0].rawValue);
+                }
+              } catch (e) {}
+            }, 180);
+          } else {
+            alert('El motor de escaneo no está disponible. Usa ingreso manual.');
+          }
         }
       } catch (err) {
         detenerCamara();
@@ -486,8 +550,53 @@
       }
     }
 
+    function configurarHardwareCamara(video) {
+      setTimeout(() => {
+        try {
+          const stream = video.srcObject;
+          if (!stream) return;
+          const track = stream.getVideoTracks()[0];
+          if (!track || !track.getCapabilities) return;
+          const caps = track.getCapabilities();
+
+          if (caps.focusMode && caps.focusMode.includes('continuous')) {
+            track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+          }
+          if (caps.torch) {
+            document.getElementById('btn-linterna').style.display = 'block';
+          }
+        } catch (e) {}
+      }, 600);
+    }
+
+    async function alternarLinterna() {
+      try {
+        const video = document.getElementById('video');
+        const stream = video.srcObject;
+        if (!stream) return;
+        const track = stream.getVideoTracks()[0];
+        linternaActiva = !linternaActiva;
+        await track.applyConstraints({ advanced: [{ torch: linternaActiva }] });
+        const btn = document.getElementById('btn-linterna');
+        btn.classList.toggle('encendida', linternaActiva);
+        btn.textContent = linternaActiva ? 'Apagar luz' : 'Linterna';
+      } catch (e) {}
+    }
+
     function detenerCamara() {
-      if (intervaloEscaneo) clearInterval(intervaloEscaneo);
+      if (intervaloEscaneoNativo) {
+        clearInterval(intervaloEscaneoNativo);
+        intervaloEscaneoNativo = null;
+      }
+      if (zxingReader) {
+        try { zxingReader.reset(); } catch (e) {}
+        zxingReader = null;
+      }
+      const video = document.getElementById('video');
+      if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+      }
       if (streamCamara) {
         streamCamara.getTracks().forEach(track => track.stop());
         streamCamara = null;
@@ -502,30 +611,51 @@
 
       const texto = codigoCrudo.trim();
       const partes = texto.split(',');
-      unidadActual = '';
 
       if (partes.length >= 3) {
         loteActual = partes[0].trim() || 'N/A';
         materialActual = partes[2].trim() || 'SIN_CODIGO';
-        unidadActual = partes[8] ? partes[8].trim() : '';
+        const ultimaParte = partes[partes.length - 1].trim();
+        unidadActual = ultimaParte || 'PZA';
       } else {
         materialActual = texto;
         loteActual = 'N/A';
+        unidadActual = 'PZA';
       }
 
-      document.getElementById('texto-material').textContent = materialActual;
-      document.getElementById('texto-lote').textContent = loteActual;
-      document.getElementById('label-cantidad').textContent = unidadActual 
-        ? `CANTIDAD TOMADA (${unidadActual})` 
-        : 'CANTIDAD TOMADA';
-      
+      actualizarVistaCantidad();
       document.getElementById('input-cantidad').value = '1';
       cambiarPantalla('pantalla-cantidad');
     }
 
+    function actualizarVistaCantidad() {
+      document.getElementById('texto-material').textContent = materialActual;
+      document.getElementById('texto-lote').textContent = loteActual;
+      document.getElementById('badge-unidad').textContent = `Unidad: ${unidadActual}`;
+      document.getElementById('label-cantidad').textContent = `CANTIDAD TOMADA (${unidadActual})`;
+
+      const sap = calcularDatosSAP(loteActual);
+      const badgeAlmacen = document.getElementById('badge-almacen');
+      if (sap.almacen) {
+        badgeAlmacen.style.display = 'inline-block';
+        badgeAlmacen.textContent = `Almacén: ${sap.almacen}`;
+      } else {
+        badgeAlmacen.style.display = 'none';
+      }
+    }
+
+    function editarLoteManual() {
+      const actual = loteActual === 'N/A' ? '' : loteActual;
+      const nuevo = prompt('Ingresa el lote interno (ej. 26309ZG934):', actual);
+      if (nuevo !== null) {
+        loteActual = nuevo.trim() || 'N/A';
+        actualizarVistaCantidad();
+      }
+    }
+
     function ingresoManual() {
       detenerCamara();
-      const manual = prompt('Escribe el código de material o lote:');
+      const manual = prompt('Escribe el código de material (o cadena completa):');
       if (manual && manual.trim() !== '') {
         procesarCodigoLeido(manual);
       }
@@ -557,7 +687,7 @@
         Codigo_Material: materialActual,
         Lote_Interno: loteActual,
         Cantidad: cantidadVal,
-        Unidad: unidadActual
+        Unidad: unidadActual || 'PZA'
       };
 
       const registros = obtenerRegistros(STORAGE_KEY);
@@ -566,7 +696,7 @@
 
       materialActual = '';
       loteActual = '';
-      unidadActual = '';
+      unidadActual = 'PZA';
       actualizarInterfaz();
       cambiarPantalla('pantalla-inicio');
       mostrarBannerDeshacer(nuevoRegistro);
@@ -578,7 +708,7 @@
       ultimoRegistroGuardado = registro;
       segundosRestantesDeshacer = 15;
 
-      document.getElementById('deshacer-detalle').textContent = `${registro.Codigo_Material} — Cant: ${registro.Cantidad}`;
+      document.getElementById('deshacer-detalle').textContent = `${registro.Codigo_Material} — Cant: ${registro.Cantidad} ${registro.Unidad || ''}`;
       document.getElementById('deshacer-tiempo').textContent = `Disponible por ${segundosRestantesDeshacer}s`;
       document.getElementById('banner-deshacer').classList.add('visible');
 
@@ -613,13 +743,9 @@
 
       materialActual = reg.Codigo_Material;
       loteActual = reg.Lote_Interno;
-      unidadActual = reg.Unidad || '';
+      unidadActual = reg.Unidad || 'PZA';
 
-      document.getElementById('texto-material').textContent = materialActual;
-      document.getElementById('texto-lote').textContent = loteActual;
-      document.getElementById('label-cantidad').textContent = unidadActual 
-        ? `CANTIDAD TOMADA (${unidadActual})` 
-        : 'CANTIDAD TOMADA';
+      actualizarVistaCantidad();
       document.getElementById('input-cantidad').value = reg.Cantidad;
 
       cambiarPantalla('pantalla-cantidad');
@@ -648,6 +774,7 @@
 
       [...registros].reverse().forEach((reg, idxRev) => {
         const idxReal = registros.length - 1 - idxRev;
+        const sap = calcularDatosSAP(reg.Lote_Interno);
         const tarjeta = document.createElement('div');
         tarjeta.className = 'item-registro';
         tarjeta.innerHTML = `
@@ -655,7 +782,7 @@
             <span class="item-material">${reg.Codigo_Material}</span>
             <span class="item-tag-analista">${reg.Analista || 'N/A'} · ${reg.Hora}</span>
           </div>
-          <div class="item-lote">Lote interno: <strong>${reg.Lote_Interno}</strong></div>
+          <div class="item-lote">Lote: <strong>${reg.Lote_Interno}</strong> ${sap.almacen ? `· Alm: <strong>${sap.almacen}</strong>` : ''} · (${reg.Unidad || 'PZA'})</div>
           <div class="item-controles">
             <div class="item-qty-box">
               <button class="btn-mini-qty" onclick="modificarCantidadLista(${idxReal}, -1)">−</button>
@@ -780,25 +907,50 @@
       const ahora = new Date();
       const timestamp = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}_${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
 
-      const datosLimpios = registros.map(r => ({
-        Fecha: r.Fecha,
-        Hora: r.Hora,
-        Analista: r.Analista || 'Sin asignar',
-        Codigo_Material: r.Codigo_Material,
-        Lote_Interno: r.Lote_Interno,
-        Cantidad: r.Cantidad
-      }));
+      const encabezados = [
+        'Codigo',
+        'Cantidad consumida',
+        'Unidad',
+        'Almacen',
+        'Centro de costos',
+        'Cuenta',
+        'Lote',
+        'Fecha de consumo',
+        'Hora de consumo',
+        'Analista'
+      ];
+
+      const filas = registros.map(r => {
+        const sap = calcularDatosSAP(r.Lote_Interno);
+        return [
+          String(r.Codigo_Material || ''),
+          Number(r.Cantidad),
+          String(r.Unidad || 'PZA'),
+          sap.almacen,
+          sap.centroCostos,
+          sap.cuenta,
+          String(r.Lote_Interno || ''),
+          r.Fecha,
+          r.Hora,
+          r.Analista || 'Sin asignar'
+        ];
+      });
 
       if (typeof XLSX !== 'undefined') {
         const nombreArchivo = `${prefijo}_${timestamp}.xlsx`;
-        const hoja = XLSX.utils.json_to_sheet(datosLimpios);
-        const rango = XLSX.utils.decode_range(hoja['!ref']);
-        for (let R = 1; R <= rango.e.r; ++R) {
-          ['D', 'E'].forEach(col => {
-            const celda = hoja[`${col}${R + 1}`];
-            if (celda) { celda.t = 's'; celda.z = '@'; }
+        const hoja = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
+        const columnasTexto = [0, 2, 3, 4, 5, 6]; // Codigo, Unidad, Almacen, Centro de costos, Cuenta, Lote
+
+        for (let R = 1; R <= filas.length; ++R) {
+          columnasTexto.forEach(C => {
+            const ref = XLSX.utils.encode_cell({ r: R, c: C });
+            if (hoja[ref] && hoja[ref].v !== '') {
+              hoja[ref].t = 's';
+              hoja[ref].z = '@';
+            }
           });
         }
+
         const libro = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(libro, hoja, 'Consumos');
         const buffer = XLSX.write(libro, { bookType: 'xlsx', type: 'array' });
@@ -808,9 +960,9 @@
         };
       } else {
         const nombreArchivo = `${prefijo}_${timestamp}.csv`;
-        let csv = '\uFEFFFecha,Hora,Analista,Codigo_Material,Lote_Interno,Cantidad\n';
-        datosLimpios.forEach(r => {
-          csv += `${r.Fecha},${r.Hora},"${r.Analista}","${r.Codigo_Material}","${r.Lote_Interno}",${r.Cantidad}\n`;
+        let csv = '\uFEFFCodigo,Cantidad consumida,Unidad,Almacen,Centro de costos,Cuenta,Lote,Fecha de consumo,Hora de consumo,Analista\n';
+        filas.forEach(f => {
+          csv += `"${f[0]}",${f[1]},"${f[2]}","${f[3]}","${f[4]}","${f[5]}","${f[6]}",${f[7]},${f[8]},"${f[9]}"\n`;
         });
         return {
           archivo: new File([csv], nombreArchivo, { type: 'text/csv;charset=utf-8;' }),
