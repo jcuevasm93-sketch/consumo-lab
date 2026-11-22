@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1d4ed8">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 0; background-color: #f4f6f9; color: #1e293b; height: 100dvh; display: flex; flex-direction: column; user-select: none; overflow: hidden; }
@@ -94,9 +94,14 @@
     .camara-contenedor { position: relative; width: 100%; flex-grow: 1; background: #000; border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin: 10px 0; }
     video { width: 100%; height: 100%; object-fit: cover; }
     .guia-qr {
-      position: absolute; width: 235px; height: 235px; border: 3px solid #22c55e;
-      border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+      position: absolute; width: 240px; height: 240px; border: 3px solid #22c55e;
+      border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
       pointer-events: none;
+    }
+    .estado-escaner {
+      position: absolute; top: 12px; left: 12px; background: rgba(15, 23, 42, 0.78);
+      color: #4ade80; border-radius: 20px; padding: 7px 12px;
+      font-size: 0.78rem; font-weight: 700; z-index: 10; pointer-events: none;
     }
     .btn-linterna {
       position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.78);
@@ -310,7 +315,8 @@
       <p style="font-size:0.84rem;">Apunta al QR de la esquina inferior derecha</p>
     </div>
     <div class="camara-contenedor">
-      <video id="video" playsinline muted></video>
+      <video id="video" playsinline autoplay muted></video>
+      <div id="estado-escaner" class="estado-escaner">Iniciando cámara...</div>
       <button id="btn-linterna" class="btn-linterna" onclick="alternarLinterna()" style="display:none;">Linterna</button>
       <div class="guia-qr"></div>
       <div id="barra-zoom" class="barra-zoom" style="display:none;">
@@ -393,12 +399,13 @@
     let loteActual = '';
     let unidadActual = 'PZA';
 
-    let zxingQrReader = null;
     let streamCamara = null;
-    let intervaloEscaneoNativo = null;
+    let intervaloEscaneo = null;
     let escaneoProcesado = false;
     let linternaActiva = false;
     let modoRespaldoActivo = false;
+    let canvasOculto = null;
+    let ctxOculto = null;
 
     let ultimoRegistroGuardado = null;
     let intervaloDeshacer = null;
@@ -497,6 +504,9 @@
       escaneoProcesado = false;
       linternaActiva = false;
 
+      const estadoEl = document.getElementById('estado-escaner');
+      estadoEl.textContent = 'Iniciando cámara...';
+
       const btnLinterna = document.getElementById('btn-linterna');
       btnLinterna.style.display = 'none';
       btnLinterna.classList.remove('encendida');
@@ -507,45 +517,80 @@
       const video = document.getElementById('video');
 
       try {
-        streamCamara = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
+        try {
+          streamCamara = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              advanced: [{ focusMode: 'continuous' }]
+            },
+            audio: false
+          });
+        } catch (e) {
+          streamCamara = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+          });
+        }
+
         video.srcObject = streamCamara;
         await video.play();
         configurarHardwareCamara(video);
 
-        // MOTOR A (ZXing exclusivo QR - funciona siempre en APK WebView offline)
-        if (typeof ZXing !== 'undefined') {
-          zxingQrReader = new ZXing.BrowserQRCodeReader(150);
-          zxingQrReader.decodeFromVideoElementContinuously(video, (result, err) => {
-            if (result && !escaneoProcesado) {
-              escaneoProcesado = true;
-              procesarCodigoLeido(result.getText());
-            }
-          });
-        }
-
-        // MOTOR B (Nativo Android exclusivo QR en paralelo - ultra rápido si el WebView lo soporta)
+        let detectorNativo = null;
         if ('BarcodeDetector' in window) {
           try {
-            const detector = new BarcodeDetector({ formats: ['qr_code'] });
-            intervaloEscaneoNativo = setInterval(async () => {
-              if (escaneoProcesado || video.readyState < 2) return;
-              try {
-                const codigos = await detector.detect(video);
-                if (codigos && codigos.length > 0 && !escaneoProcesado) {
-                  escaneoProcesado = true;
-                  procesarCodigoLeido(codigos[0].rawValue);
-                }
-              } catch (e) {}
-            }, 150);
-          } catch (e) {}
+            detectorNativo = new BarcodeDetector({ formats: ['qr_code'] });
+          } catch (e) {
+            try { detectorNativo = new BarcodeDetector(); } catch (e2) {}
+          }
         }
+
+        estadoEl.textContent = detectorNativo ? '● Buscando QR (Nativo)' : '● Buscando QR (Canvas)';
+
+        if (!canvasOculto) {
+          canvasOculto = document.createElement('canvas');
+          ctxOculto = canvasOculto.getContext('2d', { willReadFrequently: true });
+        }
+
+        intervaloEscaneo = setInterval(async () => {
+          if (escaneoProcesado || !video.videoWidth || !video.videoHeight) return;
+
+          // 1. Motor Nativo (idéntico a la versión que funcionó inicialmente)
+          if (detectorNativo) {
+            try {
+              const codigos = await detectorNativo.detect(video);
+              if (codigos && codigos.length > 0 && !escaneoProcesado) {
+                escaneoProcesado = true;
+                procesarCodigoLeido(codigos[0].rawValue);
+                return;
+              }
+            } catch (e) {
+              detectorNativo = null;
+              estadoEl.textContent = '● Buscando QR (Canvas)';
+            }
+          }
+
+          // 2. Respaldo pasivo por Canvas (no toca ni detiene <video>)
+          if (!detectorNativo && typeof jsQR === 'function' && !escaneoProcesado) {
+            try {
+              const ancho = Math.min(video.videoWidth, 960);
+              const escala = ancho / video.videoWidth;
+              const alto = Math.floor(video.videoHeight * escala);
+              canvasOculto.width = ancho;
+              canvasOculto.height = alto;
+              ctxOculto.drawImage(video, 0, 0, ancho, alto);
+              const imgData = ctxOculto.getImageData(0, 0, ancho, alto);
+              const resultado = jsQR(imgData.data, ancho, alto, { inversionAttempts: 'dontInvert' });
+              if (resultado && resultado.data && !escaneoProcesado) {
+                escaneoProcesado = true;
+                procesarCodigoLeido(resultado.data);
+              }
+            } catch (e) {}
+          }
+        }, 180);
+
       } catch (err) {
         detenerCamara();
         alert('No se pudo activar la cámara. Verifica permisos en Ajustes.');
@@ -609,14 +654,10 @@
       } catch (e) {}
     }
 
-    function detenerRecursosCamara() {
-      if (intervaloEscaneoNativo) {
-        clearInterval(intervaloEscaneoNativo);
-        intervaloEscaneoNativo = null;
-      }
-      if (zxingQrReader) {
-        try { zxingQrReader.reset(); } catch (e) {}
-        zxingQrReader = null;
+    function detenerCamara() {
+      if (intervaloEscaneo) {
+        clearInterval(intervaloEscaneo);
+        intervaloEscaneo = null;
       }
       const video = document.getElementById('video');
       if (video && video.srcObject) {
@@ -627,21 +668,13 @@
         streamCamara.getTracks().forEach(track => track.stop());
         streamCamara = null;
       }
-    }
-
-    function cancelarCamara() {
-      detenerRecursosCamara();
       cambiarPantalla('pantalla-inicio');
-    }
-
-    function detenerCamara() {
-      cancelarCamara();
     }
 
     function procesarCodigoLeido(codigoCrudo) {
       if (navigator.vibrate) navigator.vibrate(150);
       emitirBeep();
-      detenerRecursosCamara();
+      detenerCamara();
 
       const texto = codigoCrudo.replace(/[\r\n]+/g, '').trim();
       const partes = texto.split(',');
@@ -703,12 +736,10 @@
     }
 
     function ingresoManual() {
-      detenerRecursosCamara();
+      detenerCamara();
       const manual = prompt('Escribe el código de material (o cadena completa del QR):');
       if (manual && manual.trim() !== '') {
         procesarCodigoLeido(manual);
-      } else {
-        cambiarPantalla('pantalla-inicio');
       }
     }
 
