@@ -1,4 +1,4 @@
-const CACHE_NAME = 'consumo-lab-v8';
+const CACHE_NAME = 'consumo-lab-v9';
 const ARCHIVOS_BASE = [
   './',
   './index.html',
