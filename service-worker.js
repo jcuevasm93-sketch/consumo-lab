@@ -1,15 +1,23 @@
 const CACHE_NAME = 'consumo-lab-v11';
-const ARCHIVOS_BASE = [
+const ARCHIVOS_LOCALES = [
   './',
   './index.html',
   './manifest.json',
-  './icon-512.png',
-  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
+  './icon-512.png'
+];
+const LIBRERIAS_EXTERNAS = [
+  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ARCHIVOS_BASE))
+    caches.open(CACHE_NAME).then(async cache => {
+      await cache.addAll(ARCHIVOS_LOCALES);
+      await Promise.allSettled(
+        LIBRERIAS_EXTERNAS.map(url => cache.add(url))
+      );
+    })
   );
   self.skipWaiting();
 });
